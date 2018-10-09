@@ -141,7 +141,7 @@
     \def\gt{>}
     \def\lt{<}
     % Document parameters
-    \title{Feature Selection using PSO}
+    \title{Dimensionality reduction summary}
     
     
     
@@ -280,222 +280,57 @@
     
 
     
-    \hypertarget{feature-selection-using-particle-swarm-optimization-pso}{%
-\section{Feature Selection using Particle Swarm Optimization
-(PSO)}\label{feature-selection-using-particle-swarm-optimization-pso}}
+    \hypertarget{dimensionality-reduction-summary}{%
+\section{Dimensionality reduction:
+Summary}\label{dimensionality-reduction-summary}}
 
-The search space for this problem corresponds to the power set of the
-set of the 54 attributes, which means \(2^{54}\) possibilities. Denote
-such space by \(\mathcal{S}\). A local search algorithm can seek the
-desired subset of attributes without having to pass through each of the
-elements in this colossus space.
+The table below summarizes the results of the k-NN executions according
+to each dimensionality reduction strategy applied up to now in this
+work:
 
-Before submitting this problem to the PSO algorithm, it is necessary to
-define the way solutions (subsets) will be represented and the function
-to rank the solutions, also known as the \emph{fitness function}.
-
-    \hypertarget{solutions-representation}{%
-\subsection{Solutions representation}\label{solutions-representation}}
-
-For this problem, a solution \(i\) will be represented by a vector
-\(x^i \in [0,1]^{54}\), in which each component \(j\), \(x^i_j\), means
-the probability of selecting the corresponding attribute \(j\). Denote
-\([0,1]^{54}\) by \(\mathcal{S_2}\). A threshold
-\(0 \leq \theta \leq 1\) defines if the attribute was selected or not:
-\(x^i_j \geq \theta\) means that the attribute \(j\) is selected in the
-solution \(i\), as implemented by the simple function below. In this
-implementation, \(\theta = 0.5\):
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}1}]:} \PY{k}{def} \PY{n+nf}{is\PYZus{}selected}\PY{p}{(}\PY{n}{xij}\PY{p}{)}\PY{p}{:}
-            \PY{l+s+sd}{\PYZsq{}\PYZsq{}\PYZsq{}}
-        \PY{l+s+sd}{    Determines if attribute j in solution i was selected}
-        \PY{l+s+sd}{    based on the value on position j of vector x\PYZca{}i.}
-        \PY{l+s+sd}{    \PYZsq{}\PYZsq{}\PYZsq{}}
-            \PY{k}{return} \PY{n}{xij} \PY{o}{\PYZgt{}}\PY{o}{=} \PY{l+m+mf}{0.5}
-\end{Verbatim}
-
-
-    \hypertarget{fitness-function}{%
-\subsection{Fitness function}\label{fitness-function}}
-
-This function will rank each solution according to the objective of
-selecting the most appropriate attribute for this classification
-problem. Since the purpose is to determine the class of an instance
-based on the attribute values, the similarity measure of correlation
-will be applied here. Correlation between two random variables \(X\) and
-\(Y\) is given by the equation:
-
-\[
-corr(X,Y) = \frac{cov(X,Y)}{\sigma_X\sigma_Y}
-\]
-
-where \(cov(X,Y)\) is the covariance between \(X\) and \(Y\), and
-\(\sigma_X, \sigma_Y\) are the stardard deviations for \(X\) and \(Y\)
-respectively. The fitness function is defined as the mean of the
-unsigned correlations (in \([0,1]\)) of each selected attribute with
-respect to the class. Given that the PSO algorithm used here seeks to
-minimize the fitness value, the fitness function
-\(f:\mathcal{S_2}\to\mathbb{R}\) is given by the equation:
-
-\[
-f(x^i) = 1 - \left(\frac{\sum_{j, x^i_j = 1} |corr(x^i_j,cover\_type)|}{\sum_{j, x^i_j=1} 1}\right).
-\]
-
-    \hypertarget{implementation}{%
-\subsection{Implementation}\label{implementation}}
-
-First of all, it is necessary to load the dataset:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}2}]:} \PY{k+kn}{import} \PY{n+nn}{pandas} \PY{k}{as} \PY{n+nn}{pd}
-        \PY{c+c1}{\PYZsh{} read the dataset}
-        \PY{n}{dataset} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{read\PYZus{}csv}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{datasets/new\PYZus{}dataset\PYZus{}covertype.csv}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
-        \PY{c+c1}{\PYZsh{} preview}
-        \PY{n}{dataset}\PY{o}{.}\PY{n}{head}\PY{p}{(}\PY{p}{)}
-\end{Verbatim}
-
-
-\begin{Verbatim}[commandchars=\\\{\}]
-{\color{outcolor}Out[{\color{outcolor}2}]:}    elevation  aspect  slope  horiz\_dist\_hydro  vert\_dist\_hydro  \textbackslash{}
-        0       3254      75      7               365               49   
-        1       3149     341     16               216               30   
-        2       2972     321     10               150               13   
-        3       3097     265     21               430               60   
-        4       3321     286      7               660              118   
-        
-           horiz\_dist\_road  hillshade\_9  hill\_shade\_noon  hill\_shade\_15  \textbackslash{}
-        0             3034          228              228            133   
-        1             3241          186              215            167   
-        2             4796          194              230            176   
-        3             3290          162              244            218   
-        4              797          201              240            179   
-        
-           horiz\_dist\_fire     {\ldots}      soil\_type\_31  soil\_type\_32  soil\_type\_33  \textbackslash{}
-        0             4708     {\ldots}                 0             0             0   
-        1             3085     {\ldots}                 0             0             0   
-        2             4607     {\ldots}                 0             0             0   
-        3             1503     {\ldots}                 0             0             0   
-        4              968     {\ldots}                 1             0             0   
-        
-           soil\_type\_34  soil\_type\_35  soil\_type\_36  soil\_type\_37  soil\_type\_38  \textbackslash{}
-        0             0             0             0             0             0   
-        1             0             0             0             0             0   
-        2             0             0             0             0             0   
-        3             0             0             0             0             0   
-        4             0             0             0             0             0   
-        
-           soil\_type\_39  cover\_type  
-        0             1           1  
-        1             0           1  
-        2             0           1  
-        3             0           1  
-        4             0           1  
-        
-        [5 rows x 55 columns]
-\end{Verbatim}
-            
-    Correlations with respect to the class are fixed values, and can be
-calculated using the following:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}3}]:} \PY{c+c1}{\PYZsh{} compute attribute\PYZhy{}class correlations}
-        \PY{n}{class\PYZus{}correlations} \PY{o}{=} \PY{n}{dataset}\PY{o}{.}\PY{n}{corr}\PY{p}{(}\PY{n}{method}\PY{o}{=}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{pearson}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{cover\PYZus{}type}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}
-\end{Verbatim}
-
-
-    Now, define the fitness function by:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}4}]:} \PY{k+kn}{import} \PY{n+nn}{numpy} \PY{k}{as} \PY{n+nn}{np}
-        
-        \PY{k}{def} \PY{n+nf}{f}\PY{p}{(}\PY{n}{x}\PY{p}{,} \PY{n}{theta}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}\PY{p}{:}
-            \PY{l+s+sd}{\PYZsq{}\PYZsq{}\PYZsq{}}
-        \PY{l+s+sd}{    Takes a vector in [0,1]\PYZca{}54 and compute its fitness value.}
-        \PY{l+s+sd}{    \PYZsq{}\PYZsq{}\PYZsq{}}
-            \PY{n}{selected\PYZus{}attrs} \PY{o}{=} \PY{n+nb}{list}\PY{p}{(}\PY{n+nb}{map}\PY{p}{(}\PY{n}{is\PYZus{}selected}\PY{p}{,} \PY{n}{x}\PY{p}{)}\PY{p}{)}
-            \PY{k}{if} \PY{p}{(}\PY{n+nb}{any}\PY{p}{(}\PY{n}{selected\PYZus{}attrs}\PY{p}{)}\PY{p}{)}\PY{p}{:}
-                \PY{n}{sum\PYZus{}corr} \PY{o}{=} \PY{n+nb}{sum}\PY{p}{(}\PY{p}{[}\PY{n+nb}{abs}\PY{p}{(}\PY{n}{class\PYZus{}correlations}\PY{p}{[}\PY{n}{i}\PY{p}{]}\PY{p}{)} \PYZbs{}
-                                \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n}{np}\PY{o}{.}\PY{n}{arange}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,}\PY{n}{dataset}\PY{o}{.}\PY{n}{shape}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{)} \PY{k}{if} \PY{n}{selected\PYZus{}attrs}\PY{p}{[}\PY{n}{i}\PY{p}{]}\PY{p}{]}\PY{p}{)}
-                \PY{n}{count\PYZus{}attrs} \PY{o}{=} \PY{n+nb}{sum}\PY{p}{(}\PY{n}{selected\PYZus{}attrs}\PY{p}{)}
-                \PY{k}{return} \PY{l+m+mi}{1} \PY{o}{\PYZhy{}} \PY{p}{(}\PY{n}{sum\PYZus{}corr}\PY{o}{/}\PY{n}{count\PYZus{}attrs}\PY{p}{)}
-            \PY{k}{else}\PY{p}{:}
-                \PY{k}{return} \PY{l+m+mi}{1}
-\end{Verbatim}
-
-
-    The PSO implementation used here comes from the \texttt{pyswarm}
-library. An amount of 30 executions is performed:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor} }]:} \PY{k+kn}{from} \PY{n+nn}{pyswarm} \PY{k}{import} \PY{n}{pso}
-        \PY{k+kn}{import} \PY{n+nn}{itertools}
-        \PY{c+c1}{\PYZsh{} define variables\PYZsq{}s lower bound}
-        \PY{n}{lb} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{zeros}\PY{p}{(}\PY{n}{dataset}\PY{o}{.}\PY{n}{shape}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{)}
-        \PY{c+c1}{\PYZsh{} define variables\PYZsq{} upper bound}
-        \PY{n}{ub} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{ones}\PY{p}{(}\PY{n}{dataset}\PY{o}{.}\PY{n}{shape}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{)}
-        \PY{c+c1}{\PYZsh{} number of trials}
-        \PY{n}{max\PYZus{}trials} \PY{o}{=} \PY{l+m+mi}{30}
-        \PY{c+c1}{\PYZsh{} swarm size}
-        \PY{n}{swarm\PYZus{}sizes} \PY{o}{=} \PY{p}{[}\PY{l+m+mi}{25}\PY{p}{,} \PY{l+m+mi}{50}\PY{p}{,} \PY{l+m+mi}{100}\PY{p}{]}
-        \PY{c+c1}{\PYZsh{} maximum iterations}
-        \PY{n}{max\PYZus{}iterations} \PY{o}{=} \PY{p}{[}\PY{l+m+mi}{50}\PY{p}{,} \PY{l+m+mi}{100}\PY{p}{,} \PY{l+m+mi}{200}\PY{p}{]}
-        \PY{c+c1}{\PYZsh{} dataframe to store results}
-        \PY{n}{results\PYZus{}columns} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{Index}\PY{p}{(}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{swarm\PYZus{}size}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{max\PYZus{}iterations}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PYZbs{}
-                                    \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{fitness}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{)}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{dataset}\PY{o}{.}\PY{n}{columns}\PY{p}{[}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{)}
-        \PY{n}{results} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{DataFrame}\PY{p}{(}\PY{n}{columns}\PY{o}{=}\PY{n}{results\PYZus{}columns}\PY{p}{)}
-        \PY{c+c1}{\PYZsh{} running PSO for max\PYZus{}trials times combining parameters}
-        \PY{k}{for} \PY{n}{swarm\PYZus{}size}\PY{p}{,} \PY{n}{max\PYZus{}iterations} \PY{o+ow}{in} \PY{n}{itertools}\PY{o}{.}\PY{n}{product}\PY{p}{(}\PY{o}{*}\PY{p}{[}\PY{n}{swarm\PYZus{}sizes}\PY{p}{,} \PY{n}{max\PYZus{}iterations}\PY{p}{]}\PY{p}{)}\PY{p}{:}
-            \PY{n+nb}{print}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{swarm\PYZus{}size = }\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{n+nb}{str}\PY{p}{(}\PY{n}{swarm\PYZus{}size}\PY{p}{)} \PY{o}{+} \PYZbs{}
-                  \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{, max\PYZus{}iterations = }\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{n+nb}{str}\PY{p}{(}\PY{n}{max\PYZus{}iterations}\PY{p}{)}\PY{p}{)}
-            \PY{c+c1}{\PYZsh{} execute PSO for the selected parameters}
-            \PY{k}{for} \PY{n}{trial} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{max\PYZus{}trials} \PY{o}{+} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:}
-                \PY{c+c1}{\PYZsh{} execute PSO}
-                \PY{n}{xopt}\PY{p}{,} \PY{n}{fopt} \PY{o}{=} \PY{n}{pso}\PY{p}{(}\PY{n}{f}\PY{p}{,} \PY{n}{lb}\PY{p}{,} \PY{n}{ub}\PY{p}{,} \PY{n}{swarmsize}\PY{o}{=}\PY{n}{swarm\PYZus{}size}\PY{p}{,} \PY{n}{maxiter}\PY{o}{=}\PY{n}{max\PYZus{}iterations}\PY{p}{)}
-                \PY{c+c1}{\PYZsh{} booleanize vector}
-                \PY{n}{xopt} \PY{o}{=} \PY{n+nb}{list}\PY{p}{(}\PY{n+nb}{map}\PY{p}{(}\PY{n}{is\PYZus{}selected}\PY{p}{,} \PY{n}{xopt}\PY{p}{)}\PY{p}{)}
-                \PY{c+c1}{\PYZsh{} print info}
-                \PY{n+nb}{print}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Trial }\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{n+nb}{str}\PY{p}{(}\PY{n}{trial}\PY{p}{)} \PY{o}{+} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{: }\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{n+nb}{str}\PY{p}{(}\PY{n}{fopt}\PY{p}{)} \PYZbs{}
-                      \PY{o}{+} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{, selected }\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{n+nb}{str}\PY{p}{(}\PY{n+nb}{sum}\PY{p}{(}\PY{n}{xopt}\PY{p}{)}\PY{p}{)}\PY{p}{)}
-                \PY{c+c1}{\PYZsh{} append result}
-                \PY{n}{results} \PY{o}{=} \PY{n}{results}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{pd}\PY{o}{.}\PY{n}{Series}\PY{p}{(}\PY{p}{[}\PY{n}{swarm\PYZus{}size}\PY{p}{,} \PY{n}{max\PYZus{}iterations}\PY{p}{,} \PY{n}{fopt}\PY{p}{]} \PY{o}{+} \PY{n}{xopt}\PY{p}{,} \PYZbs{}
-                                                   \PY{n}{index}\PY{o}{=}\PY{n}{results\PYZus{}columns}\PY{p}{)}\PY{p}{,} \PY{n}{ignore\PYZus{}index}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
-        \PY{n}{results}
-\end{Verbatim}
-
-
-    Now, check the solution with the least fitness values:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}6}]:} \PY{c+c1}{\PYZsh{} take a solution with minimum fitness}
-        \PY{n}{selected} \PY{o}{=} \PY{n}{results}\PY{o}{.}\PY{n}{loc}\PY{p}{[}\PY{n}{results}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{fitness}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]} \PY{o}{==} \PY{n}{results}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{fitness}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{o}{.}\PY{n}{min}\PY{p}{(}\PY{p}{)}\PY{p}{]}
-        \PY{n}{selected}
-\end{Verbatim}
-
-
-\begin{Verbatim}[commandchars=\\\{\}]
-{\color{outcolor}Out[{\color{outcolor}6}]:}    swarm\_size max\_iterations   fitness elevation aspect slope  \textbackslash{}
-        98         50             50  0.866096     False  False  True   
-        
-           horiz\_dist\_hydro vert\_dist\_hydro horiz\_dist\_road hillshade\_9     {\ldots}       \textbackslash{}
-        98            False           False           False       False     {\ldots}        
-        
-           soil\_type\_30 soil\_type\_31 soil\_type\_32 soil\_type\_33 soil\_type\_34  \textbackslash{}
-        98        False         True        False         True         True   
-        
-           soil\_type\_35 soil\_type\_36 soil\_type\_37 soil\_type\_38 soil\_type\_39  
-        98        False        False         True         True         True  
-        
-        [1 rows x 57 columns]
-\end{Verbatim}
-            
-    Finally, store the results in a CSV for further usage:
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-{\color{incolor}In [{\color{incolor}7}]:} \PY{c+c1}{\PYZsh{} write the results in a csv}
-        \PY{n}{results}\PY{o}{.}\PY{n}{to\PYZus{}csv}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{results/pso\PYZus{}selected\PYZus{}attributes.csv}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{index}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
-\end{Verbatim}
-
+\begin{longtable}[]{@{}llll@{}}
+\toprule
+\begin{minipage}[b]{0.18\columnwidth}\raggedright
+Method\strut
+\end{minipage} & \begin{minipage}[b]{0.52\columnwidth}\raggedright
+Parameters\strut
+\end{minipage} & \begin{minipage}[b]{0.10\columnwidth}\raggedright
+Number of attributes\strut
+\end{minipage} & \begin{minipage}[b]{0.09\columnwidth}\raggedright
+k-NN accuracy (\%)\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.18\columnwidth}\raggedright
+None\strut
+\end{minipage} & \begin{minipage}[t]{0.52\columnwidth}\raggedright
+-\strut
+\end{minipage} & \begin{minipage}[t]{0.10\columnwidth}\raggedright
+54\strut
+\end{minipage} & \begin{minipage}[t]{0.09\columnwidth}\raggedright
+81.69\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.18\columnwidth}\raggedright
+Particle Swarm Optimization\strut
+\end{minipage} & \begin{minipage}[t]{0.52\columnwidth}\raggedright
+Swarm size = 25; Max iterations = 50\strut
+\end{minipage} & \begin{minipage}[t]{0.10\columnwidth}\raggedright
+33\strut
+\end{minipage} & \begin{minipage}[t]{0.09\columnwidth}\raggedright
+81.21\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.18\columnwidth}\raggedright
+Genetic Algorithm\strut
+\end{minipage} & \begin{minipage}[t]{0.52\columnwidth}\raggedright
+Population size = 25;Max generations = 50;Combination probability = 0.7;
+Mutation probability = 0.05\strut
+\end{minipage} & \begin{minipage}[t]{0.10\columnwidth}\raggedright
+13\strut
+\end{minipage} & \begin{minipage}[t]{0.09\columnwidth}\raggedright
+73.86\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
 
 
     % Add a bibliography block to the postdoc
